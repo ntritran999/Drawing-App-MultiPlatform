@@ -17,12 +17,22 @@ class LineShape extends BaseShape {
 
   @override
   void draw(Canvas canvas) {
-    // TODO: implement draw
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..isAntiAlias = true;
+
+    canvas.drawLine(start, end, paint);
   }
 
   @override
   Map<String, dynamic> toRawData() {
-    // TODO: implement toRawData
-    throw UnimplementedError();
+    return {
+      ...super.toRawData(),
+      'x1': start.dx,
+      'y1': start.dy,
+      'x2': end.dx,
+      'y2': end.dy,
+    };
   }
 }
