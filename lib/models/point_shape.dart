@@ -16,13 +16,21 @@ class PointShape extends BaseShape {
 
   @override
   void draw(Canvas canvas) {
-    // TODO: implement draw
+    final paint = Paint()
+              ..color = color
+              ..style = PaintingStyle.fill
+              ..isAntiAlias = true;
+
+    canvas.drawCircle(point, strokeWidth, paint);
   }
 
   @override
   Map<String, dynamic> toRawData() {
-    // TODO: implement toRawData
-    throw UnimplementedError();
+    return {
+      ...super.toRawData(),
+      'x': point.dx,
+      'y': point.dy,
+    };
   }
 
 }

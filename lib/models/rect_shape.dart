@@ -17,12 +17,24 @@ class RectShape extends BaseShape{
 
   @override
   void draw(Canvas canvas) {
-    // TODO: implement draw
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = isFilled ? PaintingStyle.fill : PaintingStyle.stroke
+      ..isAntiAlias = true;
+
+    Rect rect = Rect.fromPoints(topLeft, bottomRight);
+    canvas.drawRect(rect, paint);
   }
 
   @override
   Map<String, dynamic> toRawData() {
-    // TODO: implement toRawData
-    throw UnimplementedError();
+    return {
+      ...super.toRawData(),
+      'x1': topLeft.dx,
+      'y1': topLeft.dy,
+      'x2': bottomRight.dx,
+      'y2': bottomRight.dy,
+    };
   }
 }

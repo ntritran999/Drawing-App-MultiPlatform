@@ -16,5 +16,12 @@ abstract class BaseShape {
 
   void draw(Canvas canvas);
 
-  Map<String, dynamic> toRawData(); // Type -> Color -> StrokeWidth -> IsFilled -> Coords
+  Map<String, dynamic> toRawData() { // Type -> Color -> StrokeWidth -> IsFilled -> Coords
+    return {
+      'type': type.index,
+      'color': color.toARGB32(),
+      'strokeWidth': strokeWidth,
+      'isFilled': isFilled,
+    };
+  }
 }

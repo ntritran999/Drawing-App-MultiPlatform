@@ -18,12 +18,24 @@ class SquareShape extends BaseShape {
 
   @override
   void draw(Canvas canvas) {
-    // TODO: implement draw
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = isFilled ? PaintingStyle.fill : PaintingStyle.stroke
+      ..isAntiAlias = true;
+
+    Offset bottomRight = Offset(topLeft.dx + side, topLeft.dy + side);
+    Rect rect = Rect.fromPoints(topLeft, bottomRight);
+    canvas.drawRect(rect, paint);
   }
 
   @override
   Map<String, dynamic> toRawData() {
-    // TODO: implement toRawData
-    throw UnimplementedError();
+    return {
+      ...super.toRawData(),
+      'x': topLeft.dx,
+      'y': topLeft.dy,
+      'side': side,
+    };
   }
 }
