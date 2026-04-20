@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'package:drawing_app/providers/drawing_provider.dart';
 import 'package:drawing_app/widgets/toolbar.dart';
+import 'package:drawing_app/widgets/canvas_painter.dart';
 
 void main() {
   runApp(const MyApp());
@@ -132,13 +133,15 @@ class _DrawingPageState extends State<DrawingPage> {
                 child: Stack(
                   children: [
                     const Positioned.fill(
-                      child: Center(
-                        child: Text(
-                          'Canvas Placeholder',
-                          style: TextStyle(color: Colors.grey, fontSize: 24),
-                        ),
-                      ),
+                      child: CanvasWidget(),
                     ),
+                    if (isDesktop)
+                      Positioned(
+                        left: 16,
+                        top: 16,
+                        bottom: 16,
+                        child: toolbar,
+                      ),
                     if (isDesktop)
                       Positioned(
                         left: 16,
