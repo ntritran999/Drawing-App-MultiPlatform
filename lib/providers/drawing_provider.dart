@@ -12,9 +12,76 @@ class DrawingProvider extends ChangeNotifier {
   Color currentColor = Colors.black;
   double currentWidth = 2.0;
   bool isFilled = false;
+  bool isPickingColor = false;
+  Offset? pickerPosition;
 
   void add(BaseShape shape) {
     _shapes.add(shape);
+    notifyListeners();
+  }
+
+  void setShapeType(ShapeType type) {
+    if (currentType == type) {
+      return;
+    }
+    currentType = type;
+    notifyListeners();
+  }
+
+  void setColor(Color color) {
+    if (currentColor == color) {
+      return;
+    }
+    currentColor = color;
+    notifyListeners();
+  }
+
+  void beginColorPick() {
+    if (isPickingColor) {
+      return;
+    }
+    isPickingColor = true;
+    pickerPosition = null;
+    notifyListeners();
+  }
+
+  void updatePickerPosition(Offset position) {
+    if (!isPickingColor) {
+      return;
+    }
+    pickerPosition = position;
+    notifyListeners();
+  }
+
+  void cancelColorPick() {
+    if (!isPickingColor && pickerPosition == null) {
+      return;
+    }
+    isPickingColor = false;
+    pickerPosition = null;
+    notifyListeners();
+  }
+
+  void completeColorPick(Color color) {
+    currentColor = color;
+    isPickingColor = false;
+    pickerPosition = null;
+    notifyListeners();
+  }
+
+  void setStrokeWidth(double width) {
+    if (currentWidth == width) {
+      return;
+    }
+    currentWidth = width;
+    notifyListeners();
+  }
+
+  void setIsFilled(bool value) {
+    if (isFilled == value) {
+      return;
+    }
+    isFilled = value;
     notifyListeners();
   }
 

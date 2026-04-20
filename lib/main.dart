@@ -1,4 +1,11 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:provider/provider.dart';
+
+import 'package:drawing_app/providers/drawing_provider.dart';
+import 'package:drawing_app/widgets/toolbar.dart';
 
 void main() {
   runApp(const MyApp());
@@ -9,45 +16,88 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Draw',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
+    return ChangeNotifierProvider(
+      create: (_) => DrawingProvider(),
+      child: MaterialApp(
+        title: 'Flutter Draw',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          useMaterial3: true,
+        ),
+        home: const DrawingPage(),
       ),
-      home: const DrawingPage(),
     );
   }
 }
 
-class DrawingPage extends StatelessWidget {
+class DrawingPage extends StatefulWidget {
   const DrawingPage({super.key});
+
+  @override
+  State<DrawingPage> createState() => _DrawingPageState();
+}
+
+class _DrawingPageState extends State<DrawingPage> {
+  final GlobalKey _captureKey = GlobalKey();
+
+  Future<void> _pickColorAt(Offset localPosition) async {
+    final drawing = context.read<DrawingProvider>();
+    final boundaryContext = _captureKey.currentContext;
+    if (boundaryContext == null) {
+      return;
+    }
+
+    final boundary = boundaryContext.findRenderObject();
+    if (boundary is! RenderRepaintBoundary) {
+      return;
+    }
+
+    final pixelRatio = MediaQuery.of(context).devicePixelRatio;
+    final image = await boundary.toImage(pixelRatio: pixelRatio);
+    final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+
+    if (data == null) {
+      image.dispose();
+      return;
+    }
+
+    final rgba = data.buffer.asUint8List();
+    final x = (localPosition.dx * pixelRatio).round().clamp(0, image.width - 1);
+    final y = (localPosition.dy * pixelRatio).round().clamp(0, image.height - 1);
+    final index = (y * image.width + x) * 4;
+
+    if (index + 3 >= rgba.length) {
+      image.dispose();
+      return;
+    }
+
+    final color = Color.fromARGB(
+      rgba[index + 3],
+      rgba[index],
+      rgba[index + 1],
+      rgba[index + 2],
+    );
+
+    image.dispose();
+    drawing.completeColorPick(color);
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Picked color: #${color.toARGB32().toRadixString(16).toUpperCase()}')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 600;
+    final drawing = context.watch<DrawingProvider>();
 
-    final toolbar = Container(
-      width: 100,
-      decoration: BoxDecoration(
-        color: const Color(0xFF2A2A2A),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: const Center(
-        child: Text(
-          'Toolbar\nPlaceholder',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
+    const toolbar = SizedBox(
+      width: 220,
+      child: DrawingToolbar(),
     );
 
     return Scaffold(
@@ -63,7 +113,7 @@ class DrawingPage extends StatelessWidget {
           ? null
           : Drawer(
               backgroundColor: Colors.transparent,
-              width: 132,
+              width: 252,
               child: SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16, top: 16, bottom: 16, right: 16),
@@ -76,20 +126,81 @@ class DrawingPage extends StatelessWidget {
         bottom: false,
         child: Stack(
           children: [
-            const Positioned.fill(
-              child: Center(
-                child: Text(
-                  'Canvas Placeholder',
-                  style: TextStyle(color: Colors.grey, fontSize: 24),
+            Positioned.fill(
+              child: RepaintBoundary(
+                key: _captureKey,
+                child: Stack(
+                  children: [
+                    const Positioned.fill(
+                      child: Center(
+                        child: Text(
+                          'Canvas Placeholder',
+                          style: TextStyle(color: Colors.grey, fontSize: 24),
+                        ),
+                      ),
+                    ),
+                    if (isDesktop)
+                      Positioned(
+                        left: 16,
+                        top: 16,
+                        bottom: 16,
+                        child: toolbar,
+                      ),
+                  ],
                 ),
               ),
             ),
-            if (isDesktop)
-              Positioned(
-                left: 16,
-                top: 16,
-                bottom: 16,
-                child: toolbar,
+            if (drawing.isPickingColor)
+              Positioned.fill(
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.precise,
+                  onHover: (event) => context.read<DrawingProvider>().updatePickerPosition(event.localPosition),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: (details) => _pickColorAt(details.localPosition),
+                    child: ColoredBox(
+                      color: Colors.black.withOpacity(0.08),
+                      child: Stack(
+                        children: [
+                          const Positioned(
+                            left: 14,
+                            top: 14,
+                            child: Card(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                child: Text('Eyedropper: move mouse and click to pick color'),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 14,
+                            top: 14,
+                            child: FilledButton.tonalIcon(
+                              onPressed: () => context.read<DrawingProvider>().cancelColorPick(),
+                              icon: const Icon(Icons.close),
+                              label: const Text('Cancel'),
+                            ),
+                          ),
+                          if (drawing.pickerPosition != null)
+                            Positioned(
+                              left: drawing.pickerPosition!.dx - 10,
+                              top: drawing.pickerPosition!.dy - 10,
+                              child: IgnorePointer(
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.black, width: 2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
           ],
         ),
