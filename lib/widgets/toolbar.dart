@@ -18,34 +18,54 @@ class DrawingToolbar extends StatelessWidget {
 						borderRadius: BorderRadius.circular(24),
 						boxShadow: [
 							BoxShadow(
-								color: Colors.black.withOpacity(0.2),
+								color: Colors.black.withAlpha(51),
 								blurRadius: 10,
 								offset: const Offset(0, 4),
 							),
 						],
 					),
-					child: SingleChildScrollView(
-						padding: const EdgeInsets.all(14),
-						child: Column(
-							crossAxisAlignment: CrossAxisAlignment.stretch,
-							children: [
-								_ShapesSection(
-									currentType: drawing.currentType,
-									onSelected: drawing.setShapeType,
+					child: Column(
+						crossAxisAlignment: CrossAxisAlignment.stretch,
+						children: [
+							Padding(
+								padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+								child: OutlinedButton.icon(
+									style: OutlinedButton.styleFrom(
+										foregroundColor: Colors.white,
+										disabledForegroundColor: Colors.white38,
+										side: const BorderSide(color: Colors.white24),
+									),
+									onPressed: drawing.shapes.isNotEmpty ? drawing.undo : null,
+									icon: const Icon(Icons.undo),
+									label: const Text('Undo'),
 								),
-								const Divider(height: 24, color: Colors.white24),
-								_StyleSection(
-									selectedColor: drawing.currentColor,
-									strokeWidth: drawing.currentWidth,
-									isFilled: drawing.isFilled,
-									onColorChanged: drawing.setColor,
-									onStrokeChanged: drawing.setStrokeWidth,
-									onFillChanged: drawing.setIsFilled,
+							),
+							Expanded(
+								child: SingleChildScrollView(
+									padding: const EdgeInsets.all(14),
+									child: Column(
+										crossAxisAlignment: CrossAxisAlignment.stretch,
+										children: [
+											_ShapesSection(
+												currentType: drawing.currentType,
+												onSelected: drawing.setShapeType,
+											),
+											const Divider(height: 24, color: Colors.white24),
+											_StyleSection(
+												selectedColor: drawing.currentColor,
+												strokeWidth: drawing.currentWidth,
+												isFilled: drawing.isFilled,
+												onColorChanged: drawing.setColor,
+												onStrokeChanged: drawing.setStrokeWidth,
+												onFillChanged: drawing.setIsFilled,
+											),
+											const Divider(height: 24, color: Colors.white24),
+											const _ActionsSection(),
+										],
+									),
 								),
-								const Divider(height: 24, color: Colors.white24),
-								const _ActionsSection(),
-							],
-						),
+							),
+						],
 					),
 				);
 			},
@@ -170,14 +190,38 @@ class _ActionsSection extends StatelessWidget {
 			children: [
 				const _SectionTitle('Actions'),
 				const SizedBox(height: 10),
-				FilledButton.icon(
-					onPressed: () {
-						ScaffoldMessenger.of(context).showSnackBar(
-							const SnackBar(content: Text('Save action layout is ready.')),
-						);
-					},
-					icon: const Icon(Icons.save_alt),
-					label: const Text('Save'),
+				Row(
+					children: [
+						Expanded(
+							child: FilledButton.icon(
+								style: FilledButton.styleFrom(
+									padding: const EdgeInsets.symmetric(horizontal: 8),
+								),
+								onPressed: () {
+									ScaffoldMessenger.of(context).showSnackBar(
+										const SnackBar(content: Text('Save action layout is ready.')),
+									);
+								},
+								icon: const Icon(Icons.save_alt),
+								label: const Text('Save'),
+							),
+						),
+						const SizedBox(width: 8),
+						Expanded(
+							child: FilledButton.icon(
+								style: FilledButton.styleFrom(
+									padding: const EdgeInsets.symmetric(horizontal: 8),
+								),
+								onPressed: () {
+									ScaffoldMessenger.of(context).showSnackBar(
+										const SnackBar(content: Text('Load action layout is ready.')),
+									);
+								},
+								icon: const Icon(Icons.file_open),
+								label: const Text('Load'),
+							),
+						),
+					],
 				),
 				const SizedBox(height: 8),
 				OutlinedButton.icon(
