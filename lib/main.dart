@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 
 import 'package:drawing_app/providers/drawing_provider.dart';
+import 'package:drawing_app/services/export_service.dart';
 import 'package:drawing_app/widgets/toolbar.dart';
 import 'package:drawing_app/widgets/canvas_painter.dart';
 
@@ -41,6 +42,74 @@ class DrawingPage extends StatefulWidget {
 
 class _DrawingPageState extends State<DrawingPage> {
   final GlobalKey _captureKey = GlobalKey();
+  final ExportService _exportService = ExportService();
+
+  String _buildExportFileName(ExportImageFormat format) {
+    final now = DateTime.now();
+    String twoDigits(int value) => value.toString().padLeft(2, '0');
+    final extension = format == ExportImageFormat.png ? 'png' : 'jpg';
+
+    return 'drawing_${now.year}${twoDigits(now.month)}${twoDigits(now.day)}_'
+        '${twoDigits(now.hour)}${twoDigits(now.minute)}${twoDigits(now.second)}.$extension';
+  }
+
+  Future<void> _exportDrawing(ExportImageFormat format) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final drawing = context.read<DrawingProvider>();
+    if (drawing.shapes.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Canvas is empty, nothing to export.')),
+      );
+      return;
+    }
+
+    final boundaryContext = _captureKey.currentContext;
+    final canvasSize = boundaryContext?.size ?? MediaQuery.of(context).size;
+
+    if (canvasSize.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Unable to detect canvas size for export.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final payload = await _exportService.renderShapes(
+        shapes: drawing.shapes.toList(),
+        canvasSize: canvasSize,
+        format: format,
+        pixelRatio: MediaQuery.of(context).devicePixelRatio,
+      );
+
+      final savedPath = await _exportService.saveWithDialog(
+        payload: payload,
+        suggestedName: _buildExportFileName(format),
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      if (savedPath == null) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Export canceled.')),
+        );
+        return;
+      }
+
+      messenger.showSnackBar(
+        SnackBar(content: Text('Exported image to: $savedPath')),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      messenger.showSnackBar(SnackBar(content: Text('Export failed: $error')));
+    }
+  }
 
   Future<void> _pickColorAt(Offset localPosition) async {
     final drawing = context.read<DrawingProvider>();
@@ -65,7 +134,10 @@ class _DrawingPageState extends State<DrawingPage> {
 
     final rgba = data.buffer.asUint8List();
     final x = (localPosition.dx * pixelRatio).round().clamp(0, image.width - 1);
-    final y = (localPosition.dy * pixelRatio).round().clamp(0, image.height - 1);
+    final y = (localPosition.dy * pixelRatio).round().clamp(
+      0,
+      image.height - 1,
+    );
     final index = (y * image.width + x) * 4;
 
     if (index + 3 >= rgba.length) {
@@ -87,7 +159,11 @@ class _DrawingPageState extends State<DrawingPage> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Picked color: #${color.toARGB32().toRadixString(16).toUpperCase()}')),
+      SnackBar(
+        content: Text(
+          'Picked color: #${color.toARGB32().toRadixString(16).toUpperCase()}',
+        ),
+      ),
     );
   }
 
@@ -96,9 +172,12 @@ class _DrawingPageState extends State<DrawingPage> {
     final isDesktop = MediaQuery.of(context).size.width >= 600;
     final drawing = context.watch<DrawingProvider>();
 
-    const toolbar = SizedBox(
+    final toolbar = SizedBox(
       width: 220,
-      child: DrawingToolbar(),
+      child: DrawingToolbar(
+        onExportPng: () => _exportDrawing(ExportImageFormat.png),
+        onExportJpeg: () => _exportDrawing(ExportImageFormat.jpeg),
+      ),
     );
 
     return Scaffold(
@@ -117,7 +196,12 @@ class _DrawingPageState extends State<DrawingPage> {
               width: 252,
               child: SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 16, top: 16, bottom: 16, right: 16),
+                  padding: const EdgeInsets.only(
+                    left: 16,
+                    top: 16,
+                    bottom: 16,
+                    right: 16,
+                  ),
                   child: toolbar,
                 ),
               ),
@@ -132,23 +216,9 @@ class _DrawingPageState extends State<DrawingPage> {
                 key: _captureKey,
                 child: Stack(
                   children: [
-                    const Positioned.fill(
-                      child: CanvasWidget(),
-                    ),
+                    const Positioned.fill(child: CanvasWidget()),
                     if (isDesktop)
-                      Positioned(
-                        left: 16,
-                        top: 16,
-                        bottom: 16,
-                        child: toolbar,
-                      ),
-                    if (isDesktop)
-                      Positioned(
-                        left: 16,
-                        top: 16,
-                        bottom: 16,
-                        child: toolbar,
-                      ),
+                      Positioned(left: 16, top: 16, bottom: 16, child: toolbar),
                   ],
                 ),
               ),
@@ -157,12 +227,14 @@ class _DrawingPageState extends State<DrawingPage> {
               Positioned.fill(
                 child: MouseRegion(
                   cursor: SystemMouseCursors.precise,
-                  onHover: (event) => context.read<DrawingProvider>().updatePickerPosition(event.localPosition),
+                  onHover: (event) => context
+                      .read<DrawingProvider>()
+                      .updatePickerPosition(event.localPosition),
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTapDown: (details) => _pickColorAt(details.localPosition),
                     child: ColoredBox(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       child: Stack(
                         children: [
                           const Positioned(
@@ -170,8 +242,13 @@ class _DrawingPageState extends State<DrawingPage> {
                             top: 14,
                             child: Card(
                               child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                child: Text('Eyedropper: move mouse and click to pick color'),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                child: Text(
+                                  'Eyedropper: move mouse and click to pick color',
+                                ),
                               ),
                             ),
                           ),
@@ -179,7 +256,9 @@ class _DrawingPageState extends State<DrawingPage> {
                             right: 14,
                             top: 14,
                             child: FilledButton.tonalIcon(
-                              onPressed: () => context.read<DrawingProvider>().cancelColorPick(),
+                              onPressed: () => context
+                                  .read<DrawingProvider>()
+                                  .cancelColorPick(),
                               icon: const Icon(Icons.close),
                               label: const Text('Cancel'),
                             ),
@@ -193,7 +272,10 @@ class _DrawingPageState extends State<DrawingPage> {
                                   width: 20,
                                   height: 20,
                                   decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.black, width: 2),
+                                    border: Border.all(
+                                      color: Colors.black,
+                                      width: 2,
+                                    ),
                                     shape: BoxShape.circle,
                                   ),
                                 ),

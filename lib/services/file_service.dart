@@ -42,8 +42,6 @@ class FileService {
     ShapeType type = ShapeType.values[data['type'] as int];
     Color color = Color(data['color'] as int);
     double strokeWidth = (data['strokeWidth'] as num).toDouble();
-
-    // TODO: add isFilled to ...Shape constructor
     bool isFilled = data['isFilled'] as bool? ?? false;
 
     switch (type) {
@@ -55,7 +53,7 @@ class FileService {
             (data['x'] as num).toDouble(),
             (data['y'] as num).toDouble(),
           ),
-        );
+        )..isFilled = isFilled;
       case ShapeType.line:
         return LineShape(
           color: color,
@@ -68,18 +66,17 @@ class FileService {
             (data['x2'] as num).toDouble(),
             (data['y2'] as num).toDouble(),
           ),
-        );
+        )..isFilled = isFilled;
       case ShapeType.circle:
+        final centerX = (data['centerX'] ?? data['x']) as num;
+        final centerY = (data['centerY'] ?? data['y']) as num;
+
         return CircleShape(
           color: color,
           strokeWidth: strokeWidth,
-          center: Offset(
-            // TODO: edit after wrote CircleShape.toRawData()
-            (data['centerX'] as num).toDouble(),
-            (data['centerY'] as num).toDouble(),
-          ),
+          center: Offset(centerX.toDouble(), centerY.toDouble()),
           radius: (data['radius'] as num).toDouble(),
-        );
+        )..isFilled = isFilled;
       case ShapeType.square:
         return SquareShape(
           color: color,
@@ -89,7 +86,7 @@ class FileService {
             (data['y'] as num).toDouble(),
           ),
           side: (data['side'] as num).toDouble(),
-        );
+        )..isFilled = isFilled;
       case ShapeType.rect:
         return RectShape(
           color: color,
@@ -102,7 +99,7 @@ class FileService {
             (data['x2'] as num).toDouble(),
             (data['y2'] as num).toDouble(),
           ),
-        );
+        )..isFilled = isFilled;
       case ShapeType.ellipse:
         return EllipseShape(
           color: color,
@@ -113,7 +110,7 @@ class FileService {
             (data['right'] as num).toDouble(),
             (data['bottom'] as num).toDouble(),
           ),
-        );
+        )..isFilled = isFilled;
     }
   }
 }
