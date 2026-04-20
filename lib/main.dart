@@ -234,7 +234,7 @@ class _DrawingPageState extends State<DrawingPage> {
                     behavior: HitTestBehavior.opaque,
                     onTapDown: (details) => _pickColorAt(details.localPosition),
                     child: ColoredBox(
-                      color: Colors.black.withValues(alpha: 0.08),
+                      color: Colors.black.withAlpha(20),
                       child: Stack(
                         children: [
                           const Positioned(
