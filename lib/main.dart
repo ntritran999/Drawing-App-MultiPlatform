@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'package:drawing_app/providers/drawing_provider.dart';
+import 'package:drawing_app/widgets/toolbar.dart';
 
 void main() {
   runApp(const MyApp());
@@ -9,14 +13,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Draw',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
+    return ChangeNotifierProvider(
+      create: (_) => DrawingProvider(),
+      child: MaterialApp(
+        title: 'Flutter Draw',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          useMaterial3: true,
+        ),
+        home: const DrawingPage(),
       ),
-      home: const DrawingPage(),
     );
   }
 }
@@ -28,26 +35,9 @@ class DrawingPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 600;
 
-    final toolbar = Container(
-      width: 100,
-      decoration: BoxDecoration(
-        color: const Color(0xFF2A2A2A),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: const Center(
-        child: Text(
-          'Toolbar\nPlaceholder',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
+    const toolbar = SizedBox(
+      width: 220,
+      child: DrawingToolbar(),
     );
 
     return Scaffold(
@@ -63,7 +53,7 @@ class DrawingPage extends StatelessWidget {
           ? null
           : Drawer(
               backgroundColor: Colors.transparent,
-              width: 132,
+              width: 252,
               child: SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16, top: 16, bottom: 16, right: 16),

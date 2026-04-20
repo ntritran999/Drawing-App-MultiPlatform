@@ -18,6 +18,38 @@ class DrawingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setShapeType(ShapeType type) {
+    if (currentType == type) {
+      return;
+    }
+    currentType = type;
+    notifyListeners();
+  }
+
+  void setColor(Color color) {
+    if (currentColor == color) {
+      return;
+    }
+    currentColor = color;
+    notifyListeners();
+  }
+
+  void setStrokeWidth(double width) {
+    if (currentWidth == width) {
+      return;
+    }
+    currentWidth = width;
+    notifyListeners();
+  }
+
+  void setIsFilled(bool value) {
+    if (isFilled == value) {
+      return;
+    }
+    isFilled = value;
+    notifyListeners();
+  }
+
   void undo() {
     if (_shapes.isNotEmpty) {
       _shapes.removeLast();
