@@ -10,7 +10,9 @@ import 'package:drawing_app/models/line_shape.dart';
 import 'package:drawing_app/models/point_shape.dart';
 import 'package:drawing_app/models/rect_shape.dart';
 import 'package:drawing_app/models/square_shape.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class FileService {
   Uint8List convertShapesToBinary(List<BaseShape> shapes) {
@@ -21,19 +23,53 @@ class FileService {
     return utf8.encode(jsonString);
   }
 
-  Future<void> saveFile(List<BaseShape> shapes, String filePath) async {
+  Future<String?> saveFile(List<BaseShape> shapes) async {
     Uint8List binaryData = convertShapesToBinary(shapes);
-    File file = File(filePath);
+
+    String? outputFile = await FilePicker.saveFile(
+      dialogTitle: 'Save Drawing',
+      fileName: 'drawing.bin',
+      bytes: binaryData
+    );
+
+    if (outputFile == null) {
+      return null;
+    }
+
+    File file = File(outputFile);
     await file.writeAsBytes(binaryData);
+    return outputFile;
   }
 
-  Future<List<BaseShape>> loadFile(String filePath) async {
-    File file = File(filePath);
-    if (!await file.exists()) {
-      return [];
+  Future<List<BaseShape>> loadFile() async {
+    FilePickerResult? result = await FilePicker.pickFiles(
+      allowMultiple: false,
+      type: FileType.custom,
+      allowedExtensions: ['bin'],
+      withData: true,
+    );
+
+    if (result == null || result.files.isEmpty) return [];
+
+    String? filePath = result.files.single.path;
+    if (filePath == null) return [];
+
+    String jsonString = "";
+
+    if (kIsWeb) {
+      PlatformFile file = result.files.first;
+      if(file.bytes == null) return [];
+      jsonString = utf8.decode(file.bytes!);
+    } else {
+      File file = File(filePath);
+      if (!await file.exists()) {
+        return [];
+      }
+
+      Uint8List binaryData = await file.readAsBytes();
+      jsonString = utf8.decode(binaryData);
     }
-    Uint8List binaryData = await file.readAsBytes();
-    String jsonString = utf8.decode(binaryData);
+    
     List<dynamic> rawList = jsonDecode(jsonString);
     return rawList.map((data) => _parseShape(data)).toList();
   }

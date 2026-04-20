@@ -1,3 +1,5 @@
+import 'package:drawing_app/models/base_shape.dart';
+import 'package:drawing_app/services/file_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -197,10 +199,23 @@ class _ActionsSection extends StatelessWidget {
 								style: FilledButton.styleFrom(
 									padding: const EdgeInsets.symmetric(horizontal: 8),
 								),
-								onPressed: () {
-									ScaffoldMessenger.of(context).showSnackBar(
-										const SnackBar(content: Text('Save action layout is ready.')),
-									);
+								onPressed: () async {
+                  final drawingProvider = context.read<DrawingProvider>();
+                  final List<BaseShape> shapes = drawingProvider.shapes.toList();
+                  final fileService = FileService();
+
+                  String? result = await fileService.saveFile(shapes);
+                  if (context.mounted) {
+                    if (result != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Saved to: $result')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Save cancelled')),
+                      );
+                    }
+                  }
 								},
 								icon: const Icon(Icons.save_alt),
 								label: const Text('Save'),
@@ -212,10 +227,22 @@ class _ActionsSection extends StatelessWidget {
 								style: FilledButton.styleFrom(
 									padding: const EdgeInsets.symmetric(horizontal: 8),
 								),
-								onPressed: () {
-									ScaffoldMessenger.of(context).showSnackBar(
-										const SnackBar(content: Text('Load action layout is ready.')),
-									);
+								onPressed: () async {
+                  final drawingProvider = context.read<DrawingProvider>();
+                  final fileService = FileService();
+                  List<BaseShape> shapes = await fileService.loadFile();
+                  if (context.mounted) {
+                    if (shapes.isNotEmpty) {
+                      drawingProvider.loadShapes(shapes);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Loaded ${shapes.length} shapes')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('No file loaded')),
+                      );
+                    }
+                  }
 								},
 								icon: const Icon(Icons.file_open),
 								label: const Text('Load'),
