@@ -11,17 +11,28 @@ class EllipseShape extends BaseShape {
   EllipseShape({
     required super.color,
     required super.strokeWidth,
-    required this.bounds
+    required this.bounds,
   });
 
   @override
   void draw(Canvas canvas) {
-    // TODO: implement draw
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = isFilled ? PaintingStyle.fill : PaintingStyle.stroke
+      ..isAntiAlias = true;
+
+    canvas.drawOval(bounds, paint);
   }
 
   @override
   Map<String, dynamic> toRawData() {
-    // TODO: implement toRawData
-    throw UnimplementedError();
+    return {
+      ...super.toRawData(),
+      'left': bounds.left,
+      'top': bounds.top,
+      'right': bounds.right,
+      'bottom': bounds.bottom,
+    };
   }
 }
