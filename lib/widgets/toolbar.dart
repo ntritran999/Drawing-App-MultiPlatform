@@ -34,15 +34,36 @@ class DrawingToolbar extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    disabledForegroundColor: Colors.white38,
-                    side: const BorderSide(color: Colors.white24),
-                  ),
-                  onPressed: drawing.shapes.isNotEmpty ? drawing.undo : null,
-                  icon: const Icon(Icons.undo),
-                  label: const Text('Undo'),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          foregroundColor: Colors.white,
+                          disabledForegroundColor: Colors.white38,
+                          side: const BorderSide(color: Colors.white24),
+                        ),
+                        onPressed: drawing.shapes.isNotEmpty ? drawing.undo : null,
+                        icon: const Icon(Icons.undo, size: 18),
+                        label: const Text('Undo', style: TextStyle(fontSize: 13), maxLines: 1),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          foregroundColor: Colors.red[300],
+                          disabledForegroundColor: Colors.white38,
+                          side: const BorderSide(color: Colors.white24),
+                        ),
+                        onPressed: drawing.shapes.isNotEmpty ? drawing.clear : null,
+                        icon: const Icon(Icons.clear_all, size: 18),
+                        label: const Text('Clear All', style: TextStyle(fontSize: 13), maxLines: 1),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Expanded(
