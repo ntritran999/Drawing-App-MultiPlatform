@@ -83,9 +83,34 @@ class _DrawingPageState extends State<DrawingPage> {
         pixelRatio: MediaQuery.of(context).devicePixelRatio,
       );
 
+      final suggestedName = _buildExportFileName(format);
+
+      if (_exportService.isMobilePlatform) {
+        final savedPath = await _exportService.saveToGallery(
+          payload: payload,
+          suggestedName: suggestedName,
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        if (savedPath == null || savedPath.isEmpty) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Exported image to gallery.')),
+          );
+          return;
+        }
+
+        messenger.showSnackBar(
+          SnackBar(content: Text('Exported image to gallery: $savedPath')),
+        );
+        return;
+      }
+
       final savedPath = await _exportService.saveWithDialog(
         payload: payload,
-        suggestedName: _buildExportFileName(format),
+        suggestedName: suggestedName,
       );
 
       if (!mounted) {
@@ -175,8 +200,7 @@ class _DrawingPageState extends State<DrawingPage> {
     final toolbar = SizedBox(
       width: 220,
       child: DrawingToolbar(
-        onExportPng: () => _exportDrawing(ExportImageFormat.png),
-        onExportJpeg: () => _exportDrawing(ExportImageFormat.jpeg),
+        onExport: () => _exportDrawing(ExportImageFormat.png),
       ),
     );
 

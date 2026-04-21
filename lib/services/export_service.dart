@@ -1,10 +1,11 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:drawing_app/models/base_shape.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 
 enum ExportImageFormat { png, jpeg }
 
@@ -21,6 +22,11 @@ class ExportPayload {
 }
 
 class ExportService {
+  bool get isMobilePlatform =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
   Future<ExportPayload> renderShapes({
     required List<BaseShape> shapes,
     required Size canvasSize,
@@ -114,5 +120,54 @@ class ExportService {
 
     await file.saveTo(saveLocation.path);
     return saveLocation.path;
+  }
+
+  Future<String?> saveToGallery({
+    required ExportPayload payload,
+    required String suggestedName,
+  }) async {
+    if (!isMobilePlatform) {
+      throw UnsupportedError('Gallery export is only supported on mobile.');
+    }
+
+    final quality = payload.extension == 'jpg' ? 90 : 100;
+    final result = await ImageGallerySaverPlus.saveImage(
+      payload.bytes,
+      quality: quality,
+      name: _sanitizeFileName(suggestedName),
+      isReturnImagePathOfIOS: true,
+    );
+
+    final data = _normalizeResultMap(result);
+    final success = data['isSuccess'] ?? data['success'];
+    final isSuccess =
+        success == true || success == 1 || success?.toString() == '1';
+
+    if (!isSuccess) {
+      final error = data['errorMessage'] ?? data['message'] ?? result;
+      throw StateError('Failed to save image to gallery: $error');
+    }
+
+    final path =
+        data['filePath'] ??
+        data['savedFilePath'] ??
+        data['path'] ??
+        data['uri'];
+
+    return path?.toString();
+  }
+
+  Map<String, dynamic> _normalizeResultMap(dynamic value) {
+    if (value is Map) {
+      return value.map((key, value) => MapEntry('$key', value));
+    }
+
+    return {};
+  }
+
+  String _sanitizeFileName(String name) {
+    final dotIndex = name.lastIndexOf('.');
+    final fileName = dotIndex <= 0 ? name : name.substring(0, dotIndex);
+    return fileName.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
   }
 }

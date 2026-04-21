@@ -8,10 +8,9 @@ import 'package:drawing_app/providers/drawing_provider.dart';
 import 'package:drawing_app/widgets/color_picker.dart';
 
 class DrawingToolbar extends StatelessWidget {
-  const DrawingToolbar({super.key, this.onExportPng, this.onExportJpeg});
+  const DrawingToolbar({super.key, this.onExport});
 
-  final Future<void> Function()? onExportPng;
-  final Future<void> Function()? onExportJpeg;
+  final Future<void> Function()? onExport;
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +43,15 @@ class DrawingToolbar extends StatelessWidget {
                           disabledForegroundColor: Colors.white38,
                           side: const BorderSide(color: Colors.white24),
                         ),
-                        onPressed: drawing.shapes.isNotEmpty ? drawing.undo : null,
+                        onPressed: drawing.shapes.isNotEmpty
+                            ? drawing.undo
+                            : null,
                         icon: const Icon(Icons.undo, size: 18),
-                        label: const Text('Undo', style: TextStyle(fontSize: 13), maxLines: 1),
+                        label: const Text(
+                          'Undo',
+                          style: TextStyle(fontSize: 13),
+                          maxLines: 1,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -58,9 +63,15 @@ class DrawingToolbar extends StatelessWidget {
                           disabledForegroundColor: Colors.white38,
                           side: const BorderSide(color: Colors.white24),
                         ),
-                        onPressed: drawing.shapes.isNotEmpty ? drawing.clear : null,
+                        onPressed: drawing.shapes.isNotEmpty
+                            ? drawing.clear
+                            : null,
                         icon: const Icon(Icons.clear_all, size: 18),
-                        label: const Text('Clear All', style: TextStyle(fontSize: 13), maxLines: 1),
+                        label: const Text(
+                          'Clear All',
+                          style: TextStyle(fontSize: 13),
+                          maxLines: 1,
+                        ),
                       ),
                     ),
                   ],
@@ -86,10 +97,7 @@ class DrawingToolbar extends StatelessWidget {
                         onFillChanged: drawing.setIsFilled,
                       ),
                       const Divider(height: 24, color: Colors.white24),
-                      _ActionsSection(
-                        onExportPng: onExportPng,
-                        onExportJpeg: onExportJpeg,
-                      ),
+                      _ActionsSection(onExport: onExport),
                     ],
                   ),
                 ),
@@ -226,10 +234,9 @@ class _StyleSection extends StatelessWidget {
 }
 
 class _ActionsSection extends StatelessWidget {
-  const _ActionsSection({this.onExportPng, this.onExportJpeg});
+  const _ActionsSection({this.onExport});
 
-  final Future<void> Function()? onExportPng;
-  final Future<void> Function()? onExportJpeg;
+  final Future<void> Function()? onExport;
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +254,8 @@ class _ActionsSection extends StatelessWidget {
                 ),
                 onPressed: () async {
                   final drawingProvider = context.read<DrawingProvider>();
-                  final List<BaseShape> shapes = drawingProvider.shapes.toList();
+                  final List<BaseShape> shapes = drawingProvider.shapes
+                      .toList();
                   final fileService = FileService();
 
                   String? result = await fileService.saveFile(shapes);
@@ -281,7 +289,9 @@ class _ActionsSection extends StatelessWidget {
                     if (shapes.isNotEmpty) {
                       drawingProvider.loadShapes(shapes);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Loaded ${shapes.length} shapes')),
+                        SnackBar(
+                          content: Text('Loaded ${shapes.length} shapes'),
+                        ),
                       );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -298,72 +308,26 @@ class _ActionsSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
-          onPressed: () => _showExportOptions(context),
+          onPressed: () async {
+            if (onExport != null) {
+              await onExport!.call();
+              return;
+            }
+
+            if (!context.mounted) {
+              return;
+            }
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Export PNG action is not configured.'),
+              ),
+            );
+          },
           icon: const Icon(Icons.file_upload_outlined),
           label: const Text('Export'),
         ),
       ],
-    );
-  }
-
-  void _showExportOptions(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.image_outlined),
-                  title: const Text('Export as PNG'),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    if (onExportPng != null) {
-                      await onExportPng!.call();
-                      return;
-                    }
-
-                    if (!context.mounted) {
-                      return;
-                    }
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('PNG export action is not configured.'),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.photo_outlined),
-                  title: const Text('Export as JPEG'),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    if (onExportJpeg != null) {
-                      await onExportJpeg!.call();
-                      return;
-                    }
-
-                    if (!context.mounted) {
-                      return;
-                    }
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('JPEG export action is not configured.'),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }
