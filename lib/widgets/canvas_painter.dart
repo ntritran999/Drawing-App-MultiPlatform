@@ -79,11 +79,11 @@ class _CanvasWidgetState extends State<CanvasWidget> {
         )..isFilled = isFilled;
 
       case ShapeType.circle:
-        final radius = (_currentPoint! - _startPoint!).distance;
+        final radius = (_currentPoint! - _startPoint!).distance / 2;
         return CircleShape(
           color: color,
           strokeWidth: strokeWidth,
-          center: _startPoint!,
+          center: (_startPoint! + _currentPoint!) / 2,
           radius: radius,
         )..isFilled = isFilled;
     }

@@ -92,6 +92,11 @@ class DrawingProvider extends ChangeNotifier {
     }
   }
 
+  void clear() {
+    _shapes.clear();
+    notifyListeners();
+  }
+
   void loadShapes(List<BaseShape> shapes) {
     _shapes..clear()..addAll(shapes);
     notifyListeners();
