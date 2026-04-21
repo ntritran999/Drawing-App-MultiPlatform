@@ -95,15 +95,9 @@ class _DrawingPageState extends State<DrawingPage> {
           return;
         }
 
-        if (savedPath == null || savedPath.isEmpty) {
-          messenger.showSnackBar(
-            const SnackBar(content: Text('Exported image to gallery.')),
-          );
-          return;
-        }
-
+        debugPrint("Exported image to: $savedPath");
         messenger.showSnackBar(
-          SnackBar(content: Text('Exported image to gallery: $savedPath')),
+          SnackBar(content: Text('Exported image to gallery')),
         );
         return;
       }
@@ -200,7 +194,7 @@ class _DrawingPageState extends State<DrawingPage> {
     final toolbar = SizedBox(
       width: 220,
       child: DrawingToolbar(
-        onExport: () => _exportDrawing(ExportImageFormat.png),
+        onExport: (format) => _exportDrawing(format),
       ),
     );
 
