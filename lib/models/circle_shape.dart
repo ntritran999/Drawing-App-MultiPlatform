@@ -13,17 +13,27 @@ class CircleShape extends BaseShape {
     required super.color,
     required super.strokeWidth,
     required this.center,
-    required this.radius
+    required this.radius,
   });
 
   @override
   void draw(Canvas canvas) {
-    // TODO: implement draw
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = isFilled ? PaintingStyle.fill : PaintingStyle.stroke
+      ..isAntiAlias = true;
+
+    canvas.drawCircle(center, radius, paint);
   }
 
   @override
   Map<String, dynamic> toRawData() {
-    // TODO: implement toRawData
-    throw UnimplementedError();
+    return {
+      ...super.toRawData(),
+      'centerX': center.dx,
+      'centerY': center.dy,
+      'radius': radius,
+    };
   }
 }
