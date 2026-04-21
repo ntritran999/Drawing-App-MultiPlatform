@@ -3,14 +3,16 @@ import 'package:drawing_app/services/file_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:flutter/foundation.dart';
 import 'package:drawing_app/core/constants.dart';
 import 'package:drawing_app/providers/drawing_provider.dart';
 import 'package:drawing_app/widgets/color_picker.dart';
+import 'package:drawing_app/services/export_service.dart';
 
 class DrawingToolbar extends StatelessWidget {
   const DrawingToolbar({super.key, this.onExport});
 
-  final Future<void> Function()? onExport;
+  final Future<void> Function(ExportImageFormat format)? onExport;
 
   @override
   Widget build(BuildContext context) {
@@ -236,7 +238,7 @@ class _StyleSection extends StatelessWidget {
 class _ActionsSection extends StatelessWidget {
   const _ActionsSection({this.onExport});
 
-  final Future<void> Function()? onExport;
+  final Future<void> Function(ExportImageFormat format)? onExport;
 
   @override
   Widget build(BuildContext context) {
@@ -310,7 +312,37 @@ class _ActionsSection extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: () async {
             if (onExport != null) {
-              await onExport!.call();
+              final isMobile = !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+              if (isMobile) {
+                await onExport!(ExportImageFormat.png);
+              } else {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (context) => SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.image_outlined),
+                          title: const Text('Export as PNG'),
+                          onTap: () {
+                            Navigator.pop(context);
+                            onExport!(ExportImageFormat.png);
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.photo_outlined),
+                          title: const Text('Export as JPEG'),
+                          onTap: () {
+                            Navigator.pop(context);
+                            onExport!(ExportImageFormat.jpeg);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
               return;
             }
 
@@ -320,7 +352,7 @@ class _ActionsSection extends StatelessWidget {
 
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Export PNG action is not configured.'),
+                content: Text('Export action is not configured.'),
               ),
             );
           },
