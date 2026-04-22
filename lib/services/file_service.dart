@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -11,16 +10,32 @@ import 'package:drawing_app/models/point_shape.dart';
 import 'package:drawing_app/models/rect_shape.dart';
 import 'package:drawing_app/models/square_shape.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class FileService {
   Uint8List convertShapesToBinary(List<BaseShape> shapes) {
-    List<Map<String, dynamic>> rawList = shapes
-        .map((s) => s.toRawData())
-        .toList();
-    String jsonString = jsonEncode(rawList);
-    return utf8.encode(jsonString);
+    int totalSize = 4;
+    for (var shape in shapes) {
+      totalSize += shape.toBinary().length;
+    }
+
+    ByteData byteData = ByteData(totalSize);
+    int offset = 0;
+
+    // Write length of shapes
+    byteData.setUint32(offset, shapes.length, Endian.little);
+    offset += 4;
+
+    // Write each shape
+    for (var shape in shapes) {
+      Uint8List shapeData = shape.toBinary();
+      for (int i = 0; i < shapeData.length; i++) {
+        byteData.setUint8(offset + i, shapeData[i]);
+      }
+      offset += shapeData.length;
+    }
+
+    return byteData.buffer.asUint8List();
   }
 
   Future<String?> saveFile(List<BaseShape> shapes) async {
@@ -36,8 +51,6 @@ class FileService {
       return null;
     }
 
-    File file = File(outputFile);
-    await file.writeAsBytes(binaryData);
     return outputFile;
   }
 
@@ -51,102 +64,73 @@ class FileService {
 
     if (result == null || result.files.isEmpty) return [];
 
-    String? filePath = result.files.single.path;
-    if (filePath == null) return [];
-
-    String jsonString = "";
+    Uint8List binaryData;
 
     if (kIsWeb) {
       PlatformFile file = result.files.first;
-      if(file.bytes == null) return [];
-      jsonString = utf8.decode(file.bytes!);
+      if (file.bytes == null) return [];
+      binaryData = file.bytes!;
     } else {
+      String? filePath = result.files.single.path;
+      if (filePath == null) return [];
+
       File file = File(filePath);
       if (!await file.exists()) {
         return [];
       }
 
-      Uint8List binaryData = await file.readAsBytes();
-      jsonString = utf8.decode(binaryData);
+      binaryData = await file.readAsBytes();
     }
-    
-    List<dynamic> rawList = jsonDecode(jsonString);
-    return rawList.map((data) => _parseShape(data)).toList();
+
+    return _parseBinaryData(binaryData);
   }
 
-  BaseShape _parseShape(Map<String, dynamic> data) {
-    ShapeType type = ShapeType.values[data['type'] as int];
-    Color color = Color(data['color'] as int);
-    double strokeWidth = (data['strokeWidth'] as num).toDouble();
-    bool isFilled = data['isFilled'] as bool? ?? false;
+  List<BaseShape> _parseBinaryData(Uint8List data) {
+    if (data.length < 4) return [];
 
-    switch (type) {
+    ByteData byteData = ByteData.sublistView(data);
+    int offset = 0;
+
+    // Read shape count
+    int shapeCount = byteData.getUint32(offset, Endian.little);
+    offset += 4;
+
+    List<BaseShape> shapes = [];
+    for (int i = 0; i < shapeCount; i++) {
+      if (offset >= byteData.lengthInBytes) break;
+      
+      BaseShape? shape = _readShape(byteData, offset);
+      if (shape != null) {
+        shapes.add(shape);
+        offset += shape.getBinarySize();
+      } else {
+        break;
+      }
+    }
+
+    return shapes;
+  }
+
+
+  BaseShape? _readShape(ByteData byteData, int offset) {
+    if (offset + 1 > byteData.lengthInBytes) return null;
+
+    int typeIndex = byteData.getUint8(offset);
+    if (typeIndex >= ShapeType.values.length) return null;
+
+    switch (ShapeType.values[typeIndex]) {
       case ShapeType.point:
-        return PointShape(
-          color: color,
-          strokeWidth: strokeWidth,
-          point: Offset(
-            (data['x'] as num).toDouble(),
-            (data['y'] as num).toDouble(),
-          ),
-        )..isFilled = isFilled;
+        return PointShape.fromBinary(byteData.buffer.asUint8List(), offset);
       case ShapeType.line:
-        return LineShape(
-          color: color,
-          strokeWidth: strokeWidth,
-          start: Offset(
-            (data['x1'] as num).toDouble(),
-            (data['y1'] as num).toDouble(),
-          ),
-          end: Offset(
-            (data['x2'] as num).toDouble(),
-            (data['y2'] as num).toDouble(),
-          ),
-        )..isFilled = isFilled;
+        return LineShape.fromBinary(byteData.buffer.asUint8List(), offset);
       case ShapeType.circle:
-        final centerX = (data['centerX'] ?? data['x']) as num;
-        final centerY = (data['centerY'] ?? data['y']) as num;
-
-        return CircleShape(
-          color: color,
-          strokeWidth: strokeWidth,
-          center: Offset(centerX.toDouble(), centerY.toDouble()),
-          radius: (data['radius'] as num).toDouble(),
-        )..isFilled = isFilled;
+        return CircleShape.fromBinary(byteData.buffer.asUint8List(), offset);
       case ShapeType.square:
-        return SquareShape(
-          color: color,
-          strokeWidth: strokeWidth,
-          topLeft: Offset(
-            (data['x'] as num).toDouble(),
-            (data['y'] as num).toDouble(),
-          ),
-          side: (data['side'] as num).toDouble(),
-        )..isFilled = isFilled;
+        return SquareShape.fromBinary(byteData.buffer.asUint8List(), offset);
       case ShapeType.rect:
-        return RectShape(
-          color: color,
-          strokeWidth: strokeWidth,
-          topLeft: Offset(
-            (data['x1'] as num).toDouble(),
-            (data['y1'] as num).toDouble(),
-          ),
-          bottomRight: Offset(
-            (data['x2'] as num).toDouble(),
-            (data['y2'] as num).toDouble(),
-          ),
-        )..isFilled = isFilled;
+        return RectShape.fromBinary(byteData.buffer.asUint8List(), offset);
       case ShapeType.ellipse:
-        return EllipseShape(
-          color: color,
-          strokeWidth: strokeWidth,
-          bounds: Rect.fromLTRB(
-            (data['left'] as num).toDouble(),
-            (data['top'] as num).toDouble(),
-            (data['right'] as num).toDouble(),
-            (data['bottom'] as num).toDouble(),
-          ),
-        )..isFilled = isFilled;
+        return EllipseShape.fromBinary(byteData.buffer.asUint8List(), offset);
     }
   }
 }
